@@ -3,21 +3,14 @@
 **Check that a rendered image sequence contains exactly the frames you expected,
 and that every frame is structurally complete and consistent with the rest.**
 
-FrameCensus is a planned Rust library and command-line tool. You declare what a
-render should have produced: a numbered file pattern, a frame range, optional
-views, and required channels. FrameCensus reports every file that is missing,
-unexpected, empty, unreadable, truncated, malformed or inconsistent with the
-other frames. Reports are available as a human-readable table or as JSON, and
-the exit code is suitable for CI and render-farm post-job steps.
+FrameCensus is a planned Rust library and command-line tool for checking
+rendered image sequences against an explicit expected set. The design is
+approved; **no checking functionality is implemented yet.** This repository
+currently contains the package scaffold, the
+[architecture design](docs/architecture.md) and the
+[implementation roadmap](docs/roadmap.md).
 
-> **Status: design approved; not implemented.** There is no checking
-> implementation yet. This repository currently contains the package scaffold
-> and quality gates, the project description, the
-> [architecture design](docs/architecture.md) and the
-> [implementation roadmap](docs/roadmap.md). Every API and CLI example below is
-> a **proposed API** and does not run today.
-
-## The problem
+## Purpose
 
 Renderers, compositors and render farms write numbered image sequences:
 thousands of frames per shot, sometimes one file per stereo view, often with
@@ -30,24 +23,18 @@ many channels per file. Failures in that output are usually quiet:
   different resolution, channel set or compression.
 - Stray frames from an earlier, longer render are still in the directory.
 
-Existing open-source sequence tools such as
-[fileseq](https://github.com/justinfx/fileseq),
-[pyseq](https://github.com/rsgalloway/pyseq) and
-[lsseq](https://github.com/jrowellfx/lsseq) *discover* sequences from the files
-that exist. They can report gaps inside a detected range, but they cannot know
-that frames before the first file or after the last file were expected.
-Per-file header tools such as OpenImageIO's
-[`iinfo`](https://openimageio.readthedocs.io/en/latest/iinfo.html) or
-OpenEXR's `exrheader` read the header and can succeed on a file whose pixel
-data is cut short. Full decoders catch damage but read every pixel, which is
-slow on large sequences. The usual result is a hand-written script per
-pipeline.
+Existing sequence tools *discover* sequences from the files that exist. They
+can report gaps inside a detected range, but they cannot know that frames
+before the first file or after the last file were expected. Per-file header
+tools can succeed on a file whose pixel data is cut short, and full decoders
+catch damage only by reading every pixel.
 
-FrameCensus closes that gap with an explicit **expected set** as the oracle,
-plus inexpensive structural checks that read headers and chunk tables, not
-pixels.
+FrameCensus is designed to close that gap with an explicit **expected set** as
+the oracle, plus inexpensive structural checks that read headers and chunk
+tables, not pixels. Reports will be available as a human-readable table or as
+JSON, with exit codes suitable for CI and render-farm post-job steps.
 
-## Intended users and workflows
+## Intended users
 
 - **Pipeline and render-farm maintainers**: run FrameCensus as a post-job step,
   fail the job and re-queue only the bad frames.
@@ -58,84 +45,53 @@ pixels.
 - **Archive and delivery QC**: confirm that a transferred sequence is complete
   and structurally intact after copying.
 
-## Example (proposed)
+These are the intended users of the planned tool. FrameCensus has no users or
+releases yet.
 
-A stereo render, `renders/left/beauty.1001.exr` … `renders/right/beauty.1240.exr`,
-should contain frames 1001–1240 for both views with channels R, G, B, A and Z.
+## Status
 
-**Command line (proposed):**
+This is a scaffold. The package builds, tests, documents and lints cleanly, but
+the library has no public checking API and the binary only prints usage. No
+frame, file or sequence checking is implemented, and nothing is published.
+
+The planned capabilities, domain model, check levels, finding codes, JSON
+schema and testing strategy are described in
+[docs/architecture.md](docs/architecture.md); the implementation order is in
+[docs/roadmap.md](docs/roadmap.md).
+
+## Technology
+
+FrameCensus is a single Rust package with a library and a `framecensus`
+binary:
+
+- Rust 2024 edition, minimum supported Rust version 1.85.
+- The binary and its `clap` dependency sit behind the default `cli` feature;
+  the library builds without the CLI.
+- Planned runtime crates: `exr` and `png` for format structure, `rayon` for a
+  bounded worker pool, `serde` and `serde_json` for reports, `thiserror` for
+  errors, and `libc` on Unix for the non-blocking open flag.
+- Quality gates: `rustfmt`, `clippy` with warnings denied, `cargo doc` with
+  warnings denied, and `cargo deny` for licences, advisories, sources and
+  duplicate versions. Library code denies `unwrap`, `expect` and `panic`.
+- CI runs the quality gate on Linux and tests on Linux, macOS and Windows with
+  stable Rust, plus Linux on Rust 1.85.
+
+## Build and run
+
+Prerequisites: Rust through `rustup` (the pinned toolchain in
+`rust-toolchain.toml` includes `rustfmt` and `clippy`) and `cargo-deny` 0.19.
 
 ```console
-$ framecensus check 'renders/%V/beauty.####.exr' \
-    --frames 1001-1240 --views left,right \
-    --require-channels R,G,B,A,Z
-
-VIEW   FRAMES      FINDING        DETAIL
-left   1001        missing        expected renders/left/beauty.1001.exr
-left   1010        truncated      chunk 61 of 68 extends to byte 9437184; file is 6291456 bytes
-left   1012        empty          file is 0 bytes
-right  1015-1022   inconsistent   display_window 2048x1080; 470 of 478 readable frames have 1920x1080
-right  1241        unexpected     frame not in 1001-1240
-
-480 expected · 479 present · 1 missing · 1 truncated · 1 empty · 8 inconsistent · 1 unexpected
-FAIL (exit 1)
+$ cargo build
+$ cargo test
+$ cargo run -- --help
+$ ./scripts/check.sh
 ```
 
-Add `--output-format json` for a machine-readable report that a farm script can use to
-re-queue exactly the failing frames.
-
-**Rust library (proposed):**
-
-```rust
-use std::num::NonZeroUsize;
-
-use framecensus::{check, Expectation, Field, Level, Options};
-
-let expectation = Expectation::builder("renders/%V/beauty.####.exr")?
-    .frames("1001-1240".parse()?)
-    .views(["left", "right"])
-    .require_channels(["R", "G", "B", "A", "Z"])
-    .consistent([Field::DisplayWindow, Field::DataWindow, Field::Channels])
-    .build()?;
-
-let jobs = NonZeroUsize::new(16).expect("16 is non-zero");
-let report = check(&expectation, &Options::default().level(Level::Structure).jobs(jobs))?;
-
-for finding in report.findings() {
-    println!("{:?} {:?} {}", finding.view(), finding.frame(), finding.kind());
-}
-if report.outcome().is_fail() {
-    std::process::exit(1);
-}
-```
-
-## Planned capabilities
-
-Initial release:
-
-- Frame ranges in a subset of the common `fileseq` notation (`1001-1240`,
-  `1-100x2`, `1,5,10-20`, negative frames).
-- Numbered path patterns using `#` / `@` padding or `%04d`, with `%V` / `%v`
-  view tokens.
-- Expected-set findings: **missing**, **unexpected**, **padding mismatch**,
-  **duplicate**, **empty**, **below minimum size**, **not a regular file**,
-  **unreadable**.
-- Format checks for **OpenEXR** (single-part and multipart, scanline and tiled)
-  and **PNG**: wrong format, header errors, **truncated** data, **malformed**
-  offset or chunk tables, trailing data.
-- Required EXR channels.
-- Cross-frame consistency of selected header fields (display window, data
-  window, channels and pixel types, compression, PNG size and pixel format),
-  either against declared values or against the majority of frames.
-- Parallel scanning with a bounded worker count and bounded memory per file.
-- JSON report with a versioned schema, a compact human table that collapses
-  runs of frames, and stable exit codes.
-- A file `inspect` command that prints what FrameCensus sees in one file.
-
-Planned later (see the architecture's deferred list): full pixel decoding as an
-opt-in check level, multiview EXR stored inside one file, deep EXR structure,
-DPX and TIFF, an expectation file with multiple sequences, a settle-time policy
-for files still being written, and JUnit or SARIF output.
+`cargo run -- --help` prints the command usage; running the binary with no
+arguments also prints usage. The binary does not inspect any files yet.
+`./scripts/check.sh` runs the full local quality gate. See
+[docs/development.md](docs/development.md) for each gate and the MSRV test.
 
 ## Non-goals
 
@@ -146,40 +102,7 @@ for files still being written, and JUnit or SARIF output.
 - Repairing or rewriting files.
 - Proving a file is free of corruption. Structural checks detect truncation and
   broken tables; they do not prove that compressed pixel data decodes
-  correctly. That needs the planned opt-in decode level.
-
-## Technical overview
-
-FrameCensus is planned as one Rust package with a library and a CLI binary.
-A check runs in four stages:
-
-1. **Expect**: parse the pattern and frame set into an expected set of
-   `(view, frame)` keys, without materialising huge ranges.
-2. **Discover**: list each target directory once and match file names against
-   the compiled pattern, then compare found keys with expected keys.
-3. **Inspect**: in a bounded worker pool, stat each present file and read only
-   its header and chunk tables. EXR metadata comes from the
-   [`exr`](https://crates.io/crates/exr) crate; the chunk-table walk follows the
-   [OpenEXR file layout](https://openexr.com/en/latest/OpenEXRFileLayout.html).
-   PNG files are walked chunk by chunk per the
-   [PNG specification](https://www.w3.org/TR/png-3/).
-4. **Compare and report**: group header fields across frames, emit typed
-   findings with evidence, sort them deterministically, and compute the
-   outcome.
-
-Per-file problems are always findings, never errors that abort the run. The
-tool never writes to the scanned directories, and it treats every scanned file
-as untrusted input.
-
-The minimum supported Rust version is 1.85, with
-`#![forbid(unsafe_code)]`, `clippy -D warnings`, `rustfmt` and `cargo-deny` in
-CI; see [docs/development.md](docs/development.md) for the local quality gates.
-
-## Design
-
-The full design, including the domain model, check levels, finding codes,
-JSON schema, testing strategy, initial slice and open questions, is in
-[docs/architecture.md](docs/architecture.md).
+  correctly.
 
 ## License
 
