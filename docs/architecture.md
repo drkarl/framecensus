@@ -123,12 +123,15 @@ proven to decode. The report states the level used.
 - **N6 Portability.** Linux, macOS and Windows, local disks and network
   filesystems (NFS, SMB). Platform-specific code is limited to one Unix open
   flag (section 11).
-- **N7 Rust quality.** Stable Rust, MSRV 1.88 declared in `rust-version`,
+- **N7 Rust quality.** Stable Rust, MSRV 1.85 declared in `rust-version`,
   edition 2024, `#![forbid(unsafe_code)]`, `cargo clippy --all-targets
   -- -D warnings`, `cargo fmt --check`, `#![warn(missing_docs)]` with docs on
   every public item, `cargo deny check` (licences, advisories, sources,
-  duplicate versions), and no panics on untrusted input (`unwrap`/`expect`
-  only on internal invariants, with a comment stating the invariant).
+  duplicate versions), and no panics on untrusted input. Library code denies
+  `clippy::unwrap_used`, `clippy::expect_used` and `clippy::panic`; tests
+  are exempt (`allow-unwrap-in-tests` / `allow-expect-in-tests` in
+  `clippy.toml`). Internal invariants are expressed through types or
+  returned as errors, not asserted with `unwrap`.
 - **N8 Small API.** One entry function for checks, one for single-file
   inspection, a builder for expectations, and non-exhaustive enums so new
   finding kinds and fields can be added without breaking callers.
@@ -524,7 +527,7 @@ counts the frames as missing.
 Reference: [OpenEXR file layout](https://openexr.com/en/latest/OpenEXRFileLayout.html).
 
 1. **Magic and version.** Read 8 bytes: magic `0x762f3101` and the version
-   field. Version must be 2; flag bits 9 (single-part tiled), 10 (long
+   field (short files: see section 7.9). Version must be 2; flag bits 9 (single-part tiled), 10 (long
    names), 11 (non-image / deep), 12 (multipart) are recorded. Unknown flag
    bits → `unsupported`.
 2. **Header bytes.** Read the header into memory with a hard cap
@@ -580,7 +583,7 @@ slow network filesystems.
 
 Reference: [PNG specification, third edition](https://www.w3.org/TR/png-3/).
 
-1. 8-byte signature, otherwise `wrong_format`.
+1. 8-byte signature, otherwise `wrong_format` (short files: see section 7.9).
 2. First chunk must be `IHDR` with length 13; width and height in
    1..=2³¹−1; valid bit-depth and colour-type combination; known compression,
    filter and interlace methods. Violations → `malformed`.
@@ -642,6 +645,22 @@ single-threaded; they are dominated by directory listing and are linear.
 Default `jobs`: `available_parallelism()` clamped to 4–32. Inspection is
 I/O-latency bound, so more threads than cores helps on network filesystems
 (Q2).
+
+### 7.9 Files shorter than the signature
+
+Format detection compares the first bytes with the expected signature (EXR:
+4-byte magic plus 4-byte version field; PNG: 8-byte signature). For a
+non-empty file of length `n` shorter than that:
+
+- if its `n` bytes equal the first `n` bytes of the signature, the finding is
+  `truncated` (a valid file cut short), with `required_len` set to the
+  signature length;
+- otherwise the finding is `wrong_format`.
+
+Zero-byte files are always `empty`. A file at least as long as the signature
+whose signature bytes differ is `wrong_format`. This makes the truncation
+property in section 13 hold for every prefix length, including those shorter
+than the signature.
 
 ---
 
@@ -856,8 +875,11 @@ an async runtime.
 Unicode-3.0 and Zlib, denies unknown registries and git sources, and fails on
 RustSec advisories.
 
-MSRV 1.88: the runtime dependencies need ≤ 1.85 (`clap` 4.6); `proptest` 1.12
-needs 1.88. CI runs `cargo +1.88 test` alongside stable.
+MSRV 1.85, the minimum for edition 2024. The runtime dependencies fit it
+(`clap` 4.6 and `assert_cmd` 2.2 need 1.85, `exr` 1.74 needs 1.83). Edition
+2024 uses the MSRV-aware resolver, so dev dependencies resolve to versions
+that support 1.85 (for example a `proptest` release older than 1.12, which
+needs 1.88). CI runs `cargo +1.85 test` alongside stable.
 
 ---
 
@@ -883,7 +905,8 @@ needs 1.88. CI runs `cargo +1.88 test` alongside stable.
   Some(key)`, and names with wrong padding are classified `padding_mismatch`.
 - **Truncation property:** for every generated valid EXR and PNG fixture and
   every strict prefix length `0 < n < len`, `structure` level reports
-  `truncated` or `malformed`, never a clean file. Fixtures are small so all
+  `truncated` or `malformed` (prefixes shorter than the signature per
+  section 7.9), never a clean file. Fixtures are small so all
   prefixes are tested; larger fixtures use sampled lengths.
 - **Zero-fill property:** replacing any suffix of a valid file with zeros
   while keeping the length is never reported clean, except where the zeroed
@@ -985,8 +1008,6 @@ generated fixtures; JSON is identical for `jobs = 1` and `jobs = 16`; no
 - **Library cancellation and progress callbacks.**
 - **Relative size outliers** (frames much smaller than their neighbours) as a
   warning heuristic.
-- **Sequence comparison mode** (coverage and first-difference reports between
-  two sequences), delegating pixel metrics to existing libraries.
 
 ### Non-goals
 

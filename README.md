@@ -79,12 +79,14 @@ right  1241        unexpected     frame not in 1001-1240
 FAIL (exit 1)
 ```
 
-Add `--format json` for a machine-readable report that a farm script can use to
+Add `--output-format json` for a machine-readable report that a farm script can use to
 re-queue exactly the failing frames.
 
 **Rust library (proposed):**
 
 ```rust
+use std::num::NonZeroUsize;
+
 use framecensus::{check, Expectation, Field, Level, Options};
 
 let expectation = Expectation::builder("renders/%V/beauty.####.exr")?
@@ -94,7 +96,8 @@ let expectation = Expectation::builder("renders/%V/beauty.####.exr")?
     .consistent([Field::DisplayWindow, Field::DataWindow, Field::Channels])
     .build()?;
 
-let report = check(&expectation, &Options::default().level(Level::Structure).jobs(16))?;
+let jobs = NonZeroUsize::new(16).expect("16 is non-zero");
+let report = check(&expectation, &Options::default().level(Level::Structure).jobs(jobs))?;
 
 for finding in report.findings() {
     println!("{:?} {:?} {}", finding.view(), finding.frame(), finding.kind());
@@ -166,7 +169,7 @@ Per-file problems are always findings, never errors that abort the run. The
 tool never writes to the scanned directories, and it treats every scanned file
 as untrusted input.
 
-The planned minimum supported Rust version is 1.88, with
+The planned minimum supported Rust version is 1.85, with
 `#![forbid(unsafe_code)]`, `clippy -D warnings`, `rustfmt` and `cargo-deny` in
 CI.
 
