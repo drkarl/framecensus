@@ -53,8 +53,7 @@ to repository issue numbers once published.
   figure; the low end is not a commitment.
 - "Done" always includes unit and integration tests, documentation of every
   public item, and passing the common quality gates.
-- Not included: reviewing and merging time, choosing a licence, publishing to
-  a registry, support after release, and any item in
+- Not included: reviewing and merging time, publishing to a registry, support after release, and any item in
   [deferred work](#8-deferred-work).
 - Estimates will be re-based after M1 using the actual hours spent; the
   largest uncertainty is EXR structure (M3), which is the least familiar
@@ -212,13 +211,13 @@ publishable.
 | 24 | Fuzz targets and scheduled fuzz job | 02, 03, 13, 18 | 10–16 |
 | 25 | Benchmarks, resource-limit validation and Q1/Q2 decisions | 12, 18 | 12–20 |
 | 26 | Differential check against OpenEXR's command-line tools (optional CI job) | 18 | 8–14 |
-| 27 | Release readiness: documentation, licence, metadata, MSRV job | 23, 24, 25 | 10–16 |
+| 27 | Release readiness: documentation, metadata, licence check, MSRV job | 23, 24, 25 | 10–16 |
 
 **M5 total: 40–66 h.**
 
 **Exit criteria.** M5 gates pass. Measured numbers replace the §10 targets in
 the documentation (whether they confirm or revise them). A `0.1.0` tag is
-prepared but only created after a licence is chosen.
+prepared; publishing to a registry is a separate step.
 
 Task 26 is optional: it needs a container image with OpenEXR tools and can be
 dropped without blocking the release. If dropped, subtract 8–14 h.

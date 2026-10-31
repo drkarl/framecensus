@@ -182,4 +182,15 @@ JSON schema, testing strategy, initial slice and open questions, is in
 
 ## License
 
-Not yet chosen. A license will be selected before the first public release.
+Licensed under either of
+
+- [Apache License, Version 2.0](LICENSE-APACHE)
+- [MIT license](LICENSE-MIT)
+
+at your option.
+
+### Contribution
+
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in the work by you, as defined in the Apache-2.0 license, shall
+be dual licensed as above, without any additional terms or conditions.
