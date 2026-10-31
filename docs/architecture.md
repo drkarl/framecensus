@@ -200,6 +200,11 @@ impl Finding {
     pub fn evidence(&self) -> &Evidence;
     pub fn message(&self) -> String;                           // human sentence
 }
+impl Display for FindingKind {}                                // stable snake_case code, e.g. "truncated"
+impl Outcome {
+    pub fn is_pass(&self) -> bool;
+    pub fn is_fail(&self) -> bool;
+}
 ```
 
 `Report`, `Finding`, `Evidence` and `FileSummary` implement `serde::Serialize`.
