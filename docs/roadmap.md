@@ -73,6 +73,11 @@ to repository issue numbers once published.
 | Safety | `#![forbid(unsafe_code)]`; no new `unwrap`/`expect`/`panic!` in library code |
 | Hygiene | public API and JSON changes are listed in the pull request description; fixtures carry provenance and licence notes |
 
+These are requirements for every task, not a description of what runs today.
+The workflows in `.github/workflows` cover format, lints, tests, docs and supply
+chain for the current single package, including the MSRV job; they are
+configured but have not yet run on GitHub.
+
 ### Per-milestone gates (in addition)
 
 | Milestone | Additional gates |
