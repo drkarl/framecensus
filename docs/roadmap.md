@@ -225,7 +225,8 @@ dropped without blocking the release. If dropped, subtract 8–14 h.
 
 ## 5. Implementation order and dependencies
 
-Critical path: 01 → 02 → 03 → 05 → 06 → 07 → 08 → 12 → 13 → … The main
+Critical path: 01 → 02 → 03 → 05 → 06 → 07 → 11 → 13 (Task 13 also needs
+Task 10) → … Task 12 follows 08 and 11. The main
 parallel opportunities, if more than one engineer is available, are:
 
 - Task 04 (report model) alongside Tasks 02–03.
@@ -255,7 +256,7 @@ earlier if property harness work is wanted for M1 tests.
 |---|---|---|---|---|---|
 | R1 | The `exr` crate rejects or mis-parses some valid headers, or does not expose what the structural walk needs (Q3). | Medium | High | Task 14 starts with a timeboxed spike; header bytes are parsed from an in-memory copy; failing headers become fixtures and `unsupported` findings; minimal in-house typed parser is the fallback and is a separate task if needed. | M3 |
 | R2 | EXR chunk-coordinate expectations are wrong for tiled mipmap/ripmap or unusual line orders, producing false `malformed` findings. | Medium | High | Generate fixtures with an independent writer (`exr`) and a few committed files from other writers; run the optional differential job (Task 26); property test that intact generated files are never reported. | M3 |
-| R3 | Memory growth when an entire large sequence is missing: one finding per frame, each carrying an expected path, can reach `max_expected_keys` (10 M) findings and exceed the N3 budget. | Medium | Medium | Store only the key in `Evidence::Missing` and derive the path when rendering; measure in Task 25; lower default limit or add the compact range summary from Q13 if needed. | M1, M5 |
+| R3 | Memory growth when an entire large sequence is missing: one finding per frame, each carrying an expected path, can reach `max_expected_keys` (10 M) findings and exceed the N3 budget. | Medium | Medium | Keep the designed `Evidence::Missing { expected_path: PathBuf }`; measure memory in Task 25; if the measurement shows a problem, propose an explicit architecture amendment (for example storing only the key, a lower default limit, or the compact range summary from Q13). | M1, M5 |
 | R4 | Behaviour differs on Windows and macOS (path separators in patterns, case-insensitive filesystems, permission tests, FIFOs). | Medium | Medium | CI matrix from Task 01; Unix-only tests are gated; byte-exact matching is documented (Q9); JSON paths use `/` everywhere. | all |
 | R5 | Network filesystem latency makes the full chunk walk too slow (Q1). | Medium | Medium | Task 25 measures on a loopback-mounted network filesystem if available; the cheaper `table` depth is designed but built only on evidence. | M5 |
 | R6 | Tests that depend on permissions or special files behave differently when CI runs as root or in containers. | Medium | Low | Detect and skip with an explicit message; keep the logic in unit tests that use injected metadata where possible. | M1, M2 |
@@ -283,7 +284,7 @@ evidence, the table names the task that produces it.
 | Q10 negative-frame padding | Digits only (Task 03); verified in Task 27. |
 | Q11 one package with a `cli` feature | Task 01. |
 | Q12 PNG CRC | Not in `structure`; deferred with `decode`. |
-| Q13 per-frame missing findings | One per frame; compact range summary added in Task 06 if cheap, otherwise Task 25. |
+| Q13 per-frame missing findings | One per frame; the compact range summary is decided in Task 25 from measurements. |
 
 ## 8. Deferred work
 
@@ -318,8 +319,9 @@ whether to amend the architecture:
    combined with one `missing` finding per expected key and
    `max_expected_keys = 10 000 000` can exceed the "few hundred MiB" target
    in §10 when a whole large sequence is absent. Risk R3 describes the
-   mitigation; it is an implementation choice and needs no design change, but
-   the evidence variant may prefer to store only the key.
+   handling: the roadmap keeps the designed type and defers any change to
+   Task 25. Changing the evidence variant would be an explicit architecture
+   amendment, decided after the Task 25 measurements.
 3. **Scope of the "initial slice".** §14 describes the whole first release;
    this roadmap's M1 is a strictly smaller, earlier slice. No design change is
    implied.

@@ -1,7 +1,8 @@
 # FrameCensus architecture
 
-Status: **proposed, awaiting review.** Nothing described here is implemented.
-Names, signatures and formats are proposals and may change during review.
+Status: **design approved; not implemented.** Nothing described here is
+implemented. Names, signatures and formats are proposed and may change during
+implementation, with any change recorded as an explicit amendment.
 
 ## Contents
 

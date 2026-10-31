@@ -10,10 +10,11 @@ unexpected, empty, unreadable, truncated, malformed or inconsistent with the
 other frames. Reports are available as a human-readable table or as JSON, and
 the exit code is suitable for CI and render-farm post-job steps.
 
-> **Status: design stage.** There is no implementation yet. This repository
-> currently contains the project description and the
-> [architecture design](docs/architecture.md), which is awaiting review. Every
-> API and CLI example below is a **proposal** and does not run today.
+> **Status: design approved; not implemented.** There is no implementation
+> yet. This repository currently contains the project description, the
+> [architecture design](docs/architecture.md) and the
+> [implementation roadmap](docs/roadmap.md). Every API and CLI example below is
+> a **proposed API** and does not run today.
 
 ## The problem
 
