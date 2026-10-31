@@ -1,0 +1,3 @@
+# Rustfmt defaults are used. The edition is set here so formatting is stable
+# even when rustfmt is invoked outside Cargo.
+edition = "2024"

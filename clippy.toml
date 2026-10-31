@@ -1,0 +1,7 @@
+# Library code denies unwrap and expect (see the [lints.clippy] table in
+# Cargo.toml); tests are exempt.
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
+
+# Product name is prose, not code.
+doc-valid-idents = ["FrameCensus", ".."]
