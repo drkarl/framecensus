@@ -10,8 +10,9 @@ unexpected, empty, unreadable, truncated, malformed or inconsistent with the
 other frames. Reports are available as a human-readable table or as JSON, and
 the exit code is suitable for CI and render-farm post-job steps.
 
-> **Status: design approved; not implemented.** There is no implementation
-> yet. This repository currently contains the project description, the
+> **Status: design approved; not implemented.** There is no checking
+> implementation yet. This repository currently contains the package scaffold
+> and quality gates, the project description, the
 > [architecture design](docs/architecture.md) and the
 > [implementation roadmap](docs/roadmap.md). Every API and CLI example below is
 > a **proposed API** and does not run today.
@@ -170,9 +171,9 @@ Per-file problems are always findings, never errors that abort the run. The
 tool never writes to the scanned directories, and it treats every scanned file
 as untrusted input.
 
-The planned minimum supported Rust version is 1.85, with
+The minimum supported Rust version is 1.85, with
 `#![forbid(unsafe_code)]`, `clippy -D warnings`, `rustfmt` and `cargo-deny` in
-CI.
+CI; see [docs/development.md](docs/development.md) for the local quality gates.
 
 ## Design
 
