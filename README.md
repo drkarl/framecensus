@@ -73,8 +73,10 @@ binary:
 - Quality gates: `rustfmt`, `clippy` with warnings denied, `cargo doc` with
   warnings denied, and `cargo deny` for licences, advisories, sources and
   duplicate versions. Library code denies `unwrap`, `expect` and `panic`.
-- CI runs the quality gate on Linux and tests on Linux, macOS and Windows with
-  stable Rust, plus Linux on Rust 1.85.
+- The CI workflows are configured to run the quality gate on Linux and tests on
+  Linux, macOS and Windows with stable Rust, plus Linux on Rust 1.85. They have
+  not yet run on GitHub: every job so far was refused at start before any step
+  executed.
 
 ## Build and run
 

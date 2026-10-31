@@ -1,7 +1,8 @@
 # Local quality gates
 
-CI runs the same gates. `scripts/check.sh` is the single local entry point for
-the format, lint, test, documentation and supply-chain checks.
+The CI workflows are configured to run the same gates, but no CI job has run on
+GitHub yet. `scripts/check.sh` is the single local entry point for the format,
+lint, test, documentation and supply-chain checks.
 
 ## Prerequisites
 

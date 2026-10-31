@@ -885,7 +885,8 @@ MSRV 1.85, the minimum for edition 2024. The runtime dependencies fit it
 (`clap` 4.6 and `assert_cmd` 2.2 need 1.85, `exr` 1.74 needs 1.83). Edition
 2024 uses the MSRV-aware resolver, so dev dependencies resolve to versions
 that support 1.85 (for example a `proptest` release older than 1.12, which
-needs 1.88). CI runs `cargo +1.85 test` alongside stable.
+needs 1.88). The CI workflows are configured to run `cargo +1.85 test`
+alongside stable; they have not yet run on GitHub.
 
 ---
 
@@ -957,8 +958,10 @@ disagreements on truncation fail the job.
 ### CI matrix
 
 Linux, macOS and Windows on stable; Linux on MSRV; `fmt`, `clippy -D
-warnings`, `doc` with `-D warnings`, `cargo deny check`; fuzz targets run
-briefly on a schedule.
+warnings`, `doc` with `-D warnings`, `cargo deny check`. The workflows for this
+matrix are configured but have not yet run on GitHub. Fuzz targets and the
+differential job do not exist yet; they are scheduled as M5 tasks in the
+[roadmap](roadmap.md).
 
 ---
 
